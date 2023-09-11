@@ -1,15 +1,22 @@
 import { shallowReadonly } from "../reactivity/reactive";
 import { initProps } from "./componentProps";
+import { initSlots } from "./componentSlots";
 import { PublicInstancProxyeHandlers } from "./componentPublicInstance";
 import { emit } from "./componentEmit";
 
-export function createComponentInstance(vnode) {
+let currentInstance = null;
+
+export function createComponentInstance(vnode, parent) {
+    console.log("createComponentInstance", parent);
     const component = {
         vnode,
         type: vnode.type,
         setupState: {}, // state 对象
         props: {}, // 组件的props
         emit: () => {}, // emit 函数, 用来创建 event
+        slots: {},
+        parent,
+        provides: parent ? parent.provides : {},
     };
     component.emit = emit.bind(null, component) as any;
     return component;
@@ -18,7 +25,7 @@ export function createComponentInstance(vnode) {
 export function setupComponent(instance) {
     // TODO
     initProps(instance, instance.vnode.props);
-    // initSlots()
+    initSlots(instance, instance.vnode.children);
     setupStatefulComponent(instance);
 }
 
@@ -30,10 +37,12 @@ function setupStatefulComponent(instance: any) {
     instance.proxy = new Proxy({ _: instance }, PublicInstancProxyeHandlers);
     const { setup } = Component;
     if (setup) {
+        setCurrentInstance(instance);
         // setup 返回 Object or Render function+
         const setupResult = setup(shallowReadonly(instance.props), {
             emit: instance.emit,
         });
+        setCurrentInstance(null);
         handleSetupResult(instance, setupResult);
     }
 }
@@ -53,4 +62,12 @@ function finishComponentSetup(instance: any) {
     // if (Component.render) {
     // instance.render = Component.render;
     // }
+}
+
+export function getCurrentInstance() {
+    return currentInstance;
+}
+
+function setCurrentInstance(value) {
+    currentInstance = value;
 }

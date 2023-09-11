@@ -1,7 +1,9 @@
-import { h } from "../../lib/mini-vue.esm.js";
+import { getCurrentInstance, h } from "../../lib/mini-vue.esm.js";
 import { Foo } from "./Foo.js";
+import { createTextVNode } from "../../lib/mini-vue.esm.js";
 window.self = null;
 export const App = {
+    name: "App",
     // .vue 中有template， 会把template 编译为render函数中的内容·
     render() {
         self = this;
@@ -24,18 +26,31 @@ export const App = {
             },
             [
                 h("div", { class: "bro" }, "你好 foo"),
-                h(Foo, {
-                    count: 777,
-                    onAddOne(a, b) {
-                        // on + event
-                        console.log("onAddOne", a, b);
+                h(
+                    Foo,
+                    {
+                        count: 777,
+                        onAddOne(a, b) {
+                            // on + event
+                            console.log("onAddOne", a, b);
+                        },
                     },
-                }),
+                    {
+                        header: ({ age }) => [
+                            h("p", { class: "slot" }, "i am header" + age),
+                            createTextVNode("吸铁石睡觉，里在干什么"),
+                        ],
+                        footer: () =>
+                            h("p", { class: "slot" }, "but i am footer"),
+                    }
+                ),
             ]
         );
     },
 
     setup() {
+        const instance = getCurrentInstance();
+        console.log(instance);
         // composition API
         return {
             msg: "mini-vue",

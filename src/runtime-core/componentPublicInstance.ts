@@ -2,6 +2,7 @@
 // 为了方便拓展，可以建立起 $key 和 instance.vnode.key 的映射
 const publicPropertiesMap = {
     $el: (i) => i.vnode.el,
+    $slots: (i) => i.slots,
 };
 import { hasOwn } from "../shared/index";
 
