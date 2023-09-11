@@ -18,11 +18,20 @@ export const App = {
             "div",
             {
                 class: "a",
-                onMouseDown: () => {
-                    console.log("mousedown!");
-                },
+                // onMouseDown: () => {
+                //     console.log("mousedown!");
+                // },
             },
-            [h("div", { class: "bro" }, "你好 foo"), h(Foo, { count: 777 })]
+            [
+                h("div", { class: "bro" }, "你好 foo"),
+                h(Foo, {
+                    count: 777,
+                    onAddOne(a, b) {
+                        // on + event
+                        console.log("onAddOne", a, b);
+                    },
+                }),
+            ]
         );
     },
 

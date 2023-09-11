@@ -3,10 +3,10 @@
 const publicPropertiesMap = {
     $el: (i) => i.vnode.el,
 };
+import { hasOwn } from "../shared/index";
 
 export const PublicInstancProxyeHandlers = {
     get({ _: instance }, key) {
-        const hasOwn = (obj, key) => obj.hasOwnProperty(key);
         if (hasOwn(instance.setupState, key)) {
             return instance.setupState[key];
         }
