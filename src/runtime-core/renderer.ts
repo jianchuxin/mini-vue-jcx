@@ -3,6 +3,7 @@ import { ShapeFlags } from "./shapeFlags";
 import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
+import { EMPTY_OBJ } from "../shared";
 
 // 创建自定义渲染器，传入创建元素、绑定属性和插入元素等API
 export function createRenderer(options) {
@@ -69,10 +70,34 @@ export function createRenderer(options) {
         console.log("patchElement");
         console.log("n1", n1);
         console.log("n2", n2);
-
         //props
-
+        const prevProps = n1.props || EMPTY_OBJ;
+        const nextProps = n2.props || EMPTY_OBJ;
+        const el = (n2.el = n1.el);
+        patchProps(el, prevProps, nextProps);
         //children
+    }
+
+    function patchProps(el, prevProps, nextProps) {
+        if (prevProps !== nextProps) {
+            // 比较 新 旧 props
+            // 更改有的，增加新的，删除无的
+            for (let key in nextProps) {
+                const prevValue = prevProps[key];
+                const nextValue = nextProps[key];
+                if (prevValue !== nextValue) {
+                    hostPatchProp(el, key, prevValue, nextValue);
+                }
+            }
+            if (prevProps !== EMPTY_OBJ) {
+                for (let key in prevProps) {
+                    if (!(key in nextProps)) {
+                        const prevValue = prevProps[key];
+                        hostPatchProp(el, key, prevValue, null);
+                    }
+                }
+            }
+        }
     }
 
     function mountElement(vnode, container, parentComponent) {
@@ -82,7 +107,7 @@ export function createRenderer(options) {
         // 处理元素的props
         const { props } = vnode;
         for (const key in props) {
-            hostPatchProp(el, key, props[key]);
+            hostPatchProp(el, key, null, props[key]);
         }
 
         // 处理children
@@ -123,7 +148,6 @@ export function createRenderer(options) {
                 // 获取旧的 vnode
                 const prevSubTree = instance.subTree;
                 instance.subTree = subTree; // 以新代旧
-                console.log(prevSubTree, subTree);
                 // 更新
                 patch(prevSubTree, subTree, container, instance);
             }
