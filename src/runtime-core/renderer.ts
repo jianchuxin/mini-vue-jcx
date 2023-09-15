@@ -4,7 +4,8 @@ import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
 import { EMPTY_OBJ } from "../shared";
-import { getSequence } from "../../getSequence";
+import { shouldUpdateComponent } from "./componentUpdateUtils";
+import { queueJobs } from "./schduler";
 
 // 创建自定义渲染器，传入创建元素、绑定属性和插入元素等API
 export function createRenderer(options) {
@@ -53,13 +54,30 @@ export function createRenderer(options) {
     }
 
     function processComponent(n1, n2, container, parentComponent, anchor) {
-        mountComponent(n2, container, parentComponent, anchor);
+        if (!n1) {
+            mountComponent(n2, container, parentComponent, anchor);
+        } else {
+            // TODO updateComponent
+            updateComponent(n1, n2);
+        }
     }
 
-    function mountComponent(vnode, container, parentComponent, anchor) {
-        const instance = createComponentInstance(vnode, parentComponent);
+    function updateComponent(n1, n2) {
+        const instance = (n2.component = n1.component);
+        if (shouldUpdateComponent(n1, n2)) {
+            instance.next = n2;
+            instance.update();
+        } else {
+            n2.el = n1.el;
+            instance.vnode = n2;
+            console.log("不需要更新");
+        }
+    }
+
+    function mountComponent(initialVNode, container, parentComponent, anchor) {
+        const instance = (initialVNode.component = createComponentInstance(initialVNode, parentComponent));
         setupComponent(instance);
-        setupRenderEffect(instance, container, anchor);
+        setupRenderEffect(instance, initialVNode, container, anchor);
     }
 
     function processElement(n1, n2, container, parentComponent, anchor) {
@@ -72,8 +90,8 @@ export function createRenderer(options) {
 
     function patchElement(n1, n2, container, parentComponent, anchor) {
         console.log("patchElement");
-        // console.log("n1", n1);
-        // console.log("n2", n2);
+        console.log("n1", n1);
+        console.log("n2", n2);
         //props
         const prevProps = n1.props || EMPTY_OBJ;
         const nextProps = n2.props || EMPTY_OBJ;
@@ -284,34 +302,97 @@ export function createRenderer(options) {
         hostInsert(el, container, anchor);
     }
 
-    function setupRenderEffect(instance: any, container: any, anchor) {
-        effect(() => {
-            // 判断是 初始化 还是 更新
-            if (!instance.isMounted) {
-                console.log("init");
-                const proxy = instance.proxy;
-                const subTree = instance.render.call(proxy);
-                instance.subTree = subTree;
-                // 初始化
-                patch(null, subTree, container, instance, anchor);
-                instance.isMounted = true;
-                instance.vnode.el = subTree.el;
-            } else {
-                console.log("update!");
-                // 获取新的 vnode
-                const proxy = instance.proxy;
-                const subTree = instance.render.call(proxy);
-                // 获取旧的 vnode
-                const prevSubTree = instance.subTree;
-                instance.subTree = subTree; // 以新代旧
-                // 更新
-                patch(prevSubTree, subTree, container, instance, anchor);
+    function setupRenderEffect(instance: any, initialVNode, container: any, anchor) {
+        instance.update = effect(
+            () => {
+                // 判断是 初始化 还是 更新
+                if (!instance.isMounted) {
+                    console.log("init");
+                    const proxy = instance.proxy;
+                    const subTree = (instance.subTree = instance.render.call(proxy));
+                    // 初始化
+                    patch(null, subTree, container, instance, anchor);
+
+                    initialVNode.el = subTree.el;
+
+                    instance.isMounted = true;
+                } else {
+                    console.log("update!");
+                    // 更新组件 instance 的props 和 el, 来自新的vnode（next）
+                    const { next, vnode } = instance;
+                    if (next) {
+                        next.el = vnode.el;
+                        updateComponentPreRender(instance, next);
+                    }
+                    // 更新组件的 vnode
+                    const proxy = instance.proxy;
+                    const subTree = instance.render.call(proxy);
+                    const prevSubTree = instance.subTree;
+                    instance.subTree = subTree;
+                    patch(prevSubTree, subTree, container, instance, anchor);
+                }
+            },
+            {
+                scheduler() {
+                    console.log("update-schedular");
+                    queueJobs(instance.update);
+                },
             }
-        });
+        );
     }
 
     // 返回createApp函数
     return {
         createApp: createAppAPI(render),
     };
+}
+
+function updateComponentPreRender(instance, next) {
+    instance.props = next.props;
+    instance.next = null;
+}
+
+function getSequence(arr) {
+    const p: any = [];
+    const result = [0]; //  存储最长增长子序列的索引数组
+    let i, j, start, end, mid;
+    const len = arr.length;
+    for (i = 0; i < len; i++) {
+        const arrI = arr[i];
+        if (arrI !== 0) {
+            j = result[result.length - 1];
+            if (arr[j] < arrI) {
+                //  如果arr[i] > arr[j], 当前值比最后一项还大，可以直接push到索引数组(result)中去
+                p[i] = j; //  p记录的当前位置下，前一项的索引值
+                result.push(i);
+                continue;
+            }
+            // 二分法查找和arrI值接近的数
+            start = 0;
+            end = result.length - 1;
+            while (start < end) {
+                mid = ((start + end) / 2) | 0;
+                if (arr[result[mid]] < arrI) {
+                    start = mid + 1;
+                } else {
+                    end = mid;
+                }
+            }
+            if (arrI < arr[result[start]]) {
+                if (start > 0) {
+                    p[i] = result[start - 1]; // 记录当前位置下，替换位置的前一项的索引值
+                }
+                // 替换该值
+                result[start] = i;
+            }
+        }
+    }
+    // 通过数组p，修正最长递增子序列对应的值
+    start = result.length;
+    end = result[start - 1];
+    while (start-- > 0) {
+        result[start] = end;
+        end = p[end];
+    }
+    return result;
 }

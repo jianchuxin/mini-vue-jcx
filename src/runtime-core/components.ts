@@ -12,6 +12,7 @@ export function createComponentInstance(vnode, parent) {
     const component = {
         vnode,
         type: vnode.type,
+        next: null,
         setupState: {}, // state 对象
         props: {}, // 组件的props
         emit: () => {}, // emit 函数, 用来创建 event
