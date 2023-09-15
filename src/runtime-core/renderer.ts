@@ -4,6 +4,7 @@ import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
 import { EMPTY_OBJ } from "../shared";
+import { getSequence } from "../../getSequence";
 
 // 创建自定义渲染器，传入创建元素、绑定属性和插入元素等API
 export function createRenderer(options) {
@@ -32,13 +33,7 @@ export function createRenderer(options) {
             default:
                 if (shapeFlags & ShapeFlags.STATEFUL_COMPONENT) {
                     // 处理组件
-                    processComponent(
-                        n1,
-                        n2,
-                        container,
-                        parentComponent,
-                        anchor
-                    );
+                    processComponent(n1, n2, container, parentComponent, anchor);
                 } else if (shapeFlags & ShapeFlags.ELEMENT) {
                     // 处理元素
                     processElement(n1, n2, container, parentComponent, anchor);
@@ -149,17 +144,86 @@ export function createRenderer(options) {
                 patch(null, c2[i], container, parentComponent, anchor);
                 i++;
             }
-        }
-        // 老的比新的多
-        // e2 < i < e1
-        if (i > e2) {
+        } else if (i > e2) {
+            // 老的比新的多
+            // e2 < i < e1
             while (i <= e1) {
                 hostRemove(c1[i].el);
                 i++;
             }
-        }
+        } else {
+            // 处理中间节点
+            // 通过 key 来复用 Dom节点，并进行节点的更新
+            let s1 = i;
+            let s2 = i;
 
-        // i < e1 && i < e2
+            const toBePatched = e2 - s2 + 1;
+            let patched = 0;
+
+            let moved = false;
+            let lastMaxIndex = 0;
+
+            const newIndexToOldIndex = new Array(toBePatched).fill(-1);
+
+            const keysMap = new Map();
+            // 建立新节点 key 和 index 的 map
+            for (let i = s2; i <= e2; i++) {
+                const key = c2[i].key;
+                keysMap.set(key, i);
+            }
+            // 复用更新DOM，建立source数组
+            for (let i = s1; i <= e1; i++) {
+                if (patched >= toBePatched) {
+                    hostRemove(c1[i].el);
+                    continue;
+                }
+                let newIndex;
+                const prevChild = c1[i];
+                if (prevChild.key != null) {
+                    newIndex = keysMap.get(prevChild.key);
+                } else {
+                    for (let j = s2; j <= e2; j++) {
+                        if (isSameNode(prevChild, c2[j])) {
+                            newIndex = j;
+                            break;
+                        }
+                    }
+                }
+                if (newIndex !== undefined) {
+                    if (newIndex > lastMaxIndex) {
+                        lastMaxIndex = newIndex;
+                    } else {
+                        moved = true;
+                    }
+                    patch(prevChild, c2[newIndex], container, parentComponent, null);
+                    patched++;
+                    newIndexToOldIndex[newIndex - s2] = i;
+                } else {
+                    hostRemove(prevChild.el);
+                }
+            }
+
+            // 移动元素，从后到前遍历
+            // 只用到了新的节点，结合前面构造的source数组，
+            // 如果节点在 sequence 中说明不需要移动
+            // 如果不在， 需要获取那个目标节点和锚点（即后一个节点）
+            const sequence = moved ? getSequence(newIndexToOldIndex) : [];
+            let j = sequence.length - 1;
+            for (let i = newIndexToOldIndex.length - 1; i >= 0; i--) {
+                const nextIndex = i + s2;
+                const nextChild = c2[nextIndex];
+                const anchor = nextIndex + 1 < c2.length ? c2[nextIndex + 1].el : null;
+                if (newIndexToOldIndex[i] === -1) {
+                    patch(null, nextChild, container, parentComponent, anchor);
+                } else if (moved) {
+                    if (j < 0 || i !== sequence[j]) {
+                        hostInsert(nextChild.el, container, anchor);
+                    } else {
+                        j--;
+                    }
+                }
+            }
+        }
     }
 
     function unMountChildren(children) {
