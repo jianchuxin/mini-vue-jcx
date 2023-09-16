@@ -27,4 +27,15 @@ describe("Parse", () => {
             });
         });
     });
+
+    describe("text", () => {
+        it("text type", () => {
+            const ast = baseParse("hello world!");
+
+            expect(ast.children[0]).toStrictEqual({
+                type: NodeTypes.TEXT,
+                content: "hello world!",
+            });
+        });
+    });
 });

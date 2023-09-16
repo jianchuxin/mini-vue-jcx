@@ -36,6 +36,7 @@ function parseChildren(context) {
 
     let node;
     const s = context.source;
+
     if (s.startsWith("{{")) {
         node = parseInterpolation(context);
     } else if (s.startsWith("<")) {
@@ -45,32 +46,45 @@ function parseChildren(context) {
         }
     }
 
+    if (!node) {
+        node = praseText(context);
+    }
+
     nodes.push(node);
 
     return nodes;
 }
 
+// 解析文本
+function praseText(context) {
+    const content = parseTextData(context, context.source.length);
+    return {
+        type: NodeTypes.TEXT,
+        content,
+    };
+}
+
+function parseTextData(context, length) {
+    const content = context.source.slice(0, length);
+    advanceBy(context, content.length);
+    return content;
+}
 // 截取获得 tag
 // source 移进
 function praseElement(context) {
     // 处理开始标签
     const node = praseTag(context);
-
-    console.log(context.source);
     // 处理结束标签
     praseTag(context, LabelTypes.END);
-    console.log(context.source);
     return node;
 }
 
 function praseTag(context, labelType?) {
     // 处理开始标签 和 结束标签
     const match: any = /^<\/?([a-z]*)/i.exec(context.source);
-    console.log(match);
     const tag = match[1];
     advanceBy(context, match[0].length);
     advanceBy(context, 1);
-
     if (labelType === LabelTypes.END) return;
     return {
         type: NodeTypes.ELEMENT,
@@ -93,16 +107,16 @@ function parseInterpolation(context) {
 
     const rawContentLength = closeIndex - openDelimiter.length;
 
-    const rawContent = context.source.slice(0, rawContentLength);
+    const rawContent = parseTextData(context, rawContentLength);
     const content = rawContent.trim();
 
-    advanceBy(context, rawContentLength + closeDelimiter.length);
+    advanceBy(context, closeDelimiter.length);
 
     return {
         type: NodeTypes.INTERPOLATION,
         content: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: content,
+            content,
         },
     };
 }
