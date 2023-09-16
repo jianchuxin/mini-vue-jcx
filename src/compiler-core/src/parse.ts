@@ -4,6 +4,11 @@
 
 import { NodeTypes } from "./ast";
 
+const enum LabelTypes {
+    START,
+    END,
+}
+
 // 解析 context， 返回children
 export function baseParse(content: string) {
     const context = createParserContext(content);
@@ -30,13 +35,47 @@ function parseChildren(context) {
     const nodes: any = [];
 
     let node;
-    if (context.source.startsWith("{{")) {
+    const s = context.source;
+    if (s.startsWith("{{")) {
         node = parseInterpolation(context);
+    } else if (s.startsWith("<")) {
+        // TODO 解析ELEMENT类型
+        if (/[a-z]/i.test(s[1])) {
+            node = praseElement(context);
+        }
     }
 
     nodes.push(node);
 
     return nodes;
+}
+
+// 截取获得 tag
+// source 移进
+function praseElement(context) {
+    // 处理开始标签
+    const node = praseTag(context);
+
+    console.log(context.source);
+    // 处理结束标签
+    praseTag(context, LabelTypes.END);
+    console.log(context.source);
+    return node;
+}
+
+function praseTag(context, labelType?) {
+    // 处理开始标签 和 结束标签
+    const match: any = /^<\/?([a-z]*)/i.exec(context.source);
+    console.log(match);
+    const tag = match[1];
+    advanceBy(context, match[0].length);
+    advanceBy(context, 1);
+
+    if (labelType === LabelTypes.END) return;
+    return {
+        type: NodeTypes.ELEMENT,
+        tag,
+    };
 }
 
 // 截取出插值
