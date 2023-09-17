@@ -4,13 +4,15 @@
 
 为了深入学习 vue 源码，我打算从 0 到 1 实现一个 mini vue 框架，
 
+src 目录为 主要实现代码，tests 目录为 单元测试代码
+
 项目把 vue 的核心模块抽离出来并一一实现，包括：
 
--   响应式模块 reactivity
+-   响应式模块 **reactivity**
 
--   运行时模块 runtime-core 和 runtime-dom
+-   运行时模块 **runtime-core** 和 **runtime-dom**
 
--   编译模块 compiler
+-   编译模块 **compiler**
 
 各模块的主要功能都实现了，组织结构大抵和官方相同，各模块可以独立工作：
 
@@ -23,6 +25,12 @@
 -   集成 jest 单元测试
 -   集成 ts
 -   集成 rollup 打包
+
+### 代码思想
+
+-   TDD 测试驱动开发
+-   小步走，先实现 happy path，再实现边缘 case
+-   代码重构思想
 
 ### reactivity
 
