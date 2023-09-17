@@ -1,5 +1,5 @@
 import { createComponentInstance, setupComponent } from "./components";
-import { ShapeFlags } from "./shapeFlags";
+import { ShapeFlags } from "../shared";
 import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
@@ -309,7 +309,7 @@ export function createRenderer(options) {
                 if (!instance.isMounted) {
                     console.log("init");
                     const proxy = instance.proxy;
-                    const subTree = (instance.subTree = instance.render.call(proxy));
+                    const subTree = (instance.subTree = instance.render.call(proxy, proxy));
                     // 初始化
                     patch(null, subTree, container, instance, anchor);
 
@@ -326,7 +326,7 @@ export function createRenderer(options) {
                     }
                     // 更新组件的 vnode
                     const proxy = instance.proxy;
-                    const subTree = instance.render.call(proxy);
+                    const subTree = instance.render.call(proxy, proxy);
                     const prevSubTree = instance.subTree;
                     instance.subTree = subTree;
                     patch(prevSubTree, subTree, container, instance, anchor);

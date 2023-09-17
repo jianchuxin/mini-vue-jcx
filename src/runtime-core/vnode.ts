@@ -1,6 +1,9 @@
-import { ShapeFlags } from "./shapeFlags";
+import { ShapeFlags } from "../shared";
 export const Fragment = Symbol("Fragment");
 export const Text = Symbol("Text");
+
+export { createVNode as createElementVNode };
+
 export function createVNode(type, props?, children?) {
     // type 为组件 或者 element
     const vnode = {

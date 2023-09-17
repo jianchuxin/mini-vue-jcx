@@ -1,4 +1,4 @@
-import { ShapeFlags } from "./shapeFlags";
+import { ShapeFlags } from "../shared";
 
 export function initSlots(instance, children) {
     if (instance.vnode.shapeFlags & ShapeFlags.SLOT_CHILDREN) {

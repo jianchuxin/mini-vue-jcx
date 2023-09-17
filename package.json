@@ -11,6 +11,7 @@
         "test": "jest",
         "build": "rollup -c rollup.config.js"
     },
+    "type": "module",
     "keywords": [],
     "author": "",
     "license": "ISC",

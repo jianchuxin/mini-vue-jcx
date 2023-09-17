@@ -2,6 +2,8 @@ export const extend = Object.assign;
 
 export const EMPTY_OBJ = {};
 
+export * from "./toDisplayString";
+
 export function isObject(value) {
     return value !== null && typeof value === "object";
 }
@@ -30,3 +32,5 @@ export function toHandlerKey(str: string) {
     // on +
     return str ? "on" + capitalize(str) : "";
 }
+
+export { ShapeFlags } from "./shapeFlags";

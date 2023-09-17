@@ -27,8 +27,8 @@ describe("codegen", () => {
         transform(ast, {
             nodeTransforms: [transformExpression, transformElement, transformText],
         });
-
         const { code } = generate(ast);
+        console.log(code);
         expect(code).toMatchSnapshot();
     });
 });
