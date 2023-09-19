@@ -1,7 +1,7 @@
 import { extend } from "../shared/index";
 
 let activeEffect;
-let shouldTrack = true;
+let shouldTrack = false;
 let targetsMap = new Map();
 
 export class ReactiveEffect {
